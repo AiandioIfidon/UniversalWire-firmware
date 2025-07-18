@@ -13,14 +13,14 @@ void store(String inputValue, const char* name){
   lcd_print_offline("Updated ", name);
 }
 
-class WiFiCredentialCallback: public BLECharacteristicCallbacks {
+class TransceiverCallback: public BLECharacteristicCallbacks {
 private:
     String storage;
     const char* name;
     const size_t maxLength;
 
 public:
-    WiFiCredentialCallback(String storage, const char* name, size_t maxLen) 
+    TransceiverCallback(String storage, const char* name, size_t maxLen) 
         : storage(storage), name(name), maxLength(maxLen) {}
 
     void onWrite(BLECharacteristic *pCharacteristic) override {
@@ -53,22 +53,22 @@ void setupBLEServer() {
         return;
     }
 
-    BLECharacteristic *ssidCharacteristic = pService->createCharacteristic(
-        SSID_UUID,
+    BLECharacteristic *sendCharacteristic = pService->createCharacteristic(
+        SEND_UUID,
         BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE
     );
-    BLECharacteristic *passwordCharacteristic = pService->createCharacteristic(
-        PASSPHRASE_UUID,
+    BLECharacteristic *recieveCharacteristic = pService->createCharacteristic(
+        RECEIVE_UUID,
         BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE
     );
 
-    if (!ssidCharacteristic || !passwordCharacteristic) {
+    if (!sendCharacteristic || !recieveCharacteristic) {
         Serial.println(F("Failed to create characteristics"));
         return;
     }
 
-    ssidCharacteristic->setCallbacks(new WiFiCredentialCallback(g_ssid, "ssid", MAX_CREDENTIAL_LENGTH));
-    passwordCharacteristic->setCallbacks(new WiFiCredentialCallback(g_password, "password", MAX_CREDENTIAL_LENGTH));
+    sendCharacteristic->setCallbacks(new TransceiverCallback(g_sent, "send", MAX_CREDENTIAL_LENGTH));
+    recieveCharacteristic->setCallbacks(new TransceiverCallback(g_received, "received", MAX_CREDENTIAL_LENGTH));
 
     pService->start();
 
@@ -80,8 +80,6 @@ void setupBLEServer() {
     BLEDevice::startAdvertising();
 
     Serial.println(F("BLE server started successfully"));
-    lcdclear();
-    lcd_print_offline("BLE server start", "-ed successfully");
     return;
 }
  void getWiFiCredentials() {
@@ -90,40 +88,40 @@ void setupBLEServer() {
         return;
     }
     
-    g_ssid = preferences.getString("ssid", "");
-    g_password = preferences.getString("password", "");
+    g_sent = preferences.getString("ssid", "");
+    g_received = preferences.getString("password", "");
     
-    if (g_ssid.length() >= MAX_CREDENTIAL_LENGTH || 
-        g_password.length() >= MAX_CREDENTIAL_LENGTH) {
+    if (g_sent.length() >= MAX_CREDENTIAL_LENGTH || 
+        g_received.length() >= MAX_CREDENTIAL_LENGTH) {
         Serial.println(F("Stored credentials too long, changing is to less that 64 characters is adviced"));
         preferences.end();
         return;
     }
     Serial.println("Found wifi credentials");
     Serial.print("ssid: ");
-    Serial.println(g_ssid);
+    Serial.println(g_sent);
     Serial.print("password: ");
-    Serial.println(g_password);
+    Serial.println(g_received);
     preferences.end();
     return;
 }
 void Credentials_Change() {
   setupBLEServer();
   updatingCredentials = true;
-  g_password = "";
-  g_ssid = "";
-  store(g_ssid, "ssid");
-  store(g_password, "password");
+  g_received = "";
+  g_sent = "";
+  store(g_sent, "ssid");
+  store(g_received, "password");
 
-  while(g_ssid == "" && g_password == ""){
+  while(g_sent == "" && g_received == ""){
     getWiFiCredentials();
     Serial.println("\nWaiting for changes");
     lcdclear();
     lcd_print_offline("Waiting for ", "credentials");
     delay(1000);
   }
-  store(g_ssid, "ssid");
-  store(g_password, "password");
+  store(g_sent, "ssid");
+  store(g_received, "password");
   getWiFiCredentials();
   updatingCredentials = false;
   Serial.println("Successfully changed wifi credentials");
@@ -144,7 +142,7 @@ void setuphandling(){
     Credentials_Change();
   } else {
     getWiFiCredentials();
-    if (g_ssid[0] == '\0' && g_password[0] == '\0') {
+    if (g_sent[0] == '\0' && g_received[0] == '\0') {
       Credentials_Change();
     }
   }

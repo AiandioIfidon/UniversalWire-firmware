@@ -6,6 +6,6 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 
+#include "config.h"
 #include "bleserver.h"
 
-void 
