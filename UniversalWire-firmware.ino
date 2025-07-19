@@ -5,8 +5,8 @@
 
 int counter = 0;
 const uint8_t MAX_CREDENTIAL_LENGTH = 32;
-const String DEVICE_NAME = "Transceiver";  // ✅ Use String, not string
-String g_received = "";  // ✅ Correct type
+const String DEVICE_NAME = "Transceiver";
+String g_received = ""; 
 String g_sent = "";
 
 const String SERVICE_UUID = "853f29b2-f5ed-4b69-b4c6-9cd68a9fc2b0";
