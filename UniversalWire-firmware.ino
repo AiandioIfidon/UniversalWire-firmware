@@ -9,8 +9,8 @@ const String DEVICE_NAME = "Transceiver";
 String g_received = ""; 
 String g_sent = "";
 
-const String SERVICE_UUID = "853f29b2-f5ed-4b69-b4c6-9cd68a9fc2b0";
-const String SEND_UUID = "b72b9432-25f9-4c7f-96cb-fcb8efde84fd";
+const String SERVICE_UUID = "853f29b2-f5ed-4b69-b4c6-9cd68a9fc2b0"; // these UUIDs were generated using an online UUID generator.
+const String SEND_UUID = "b72b9432-25f9-4c7f-96cb-fcb8efde84fd"; // they can be anything but they have to match with the app and this is what I used in the app.
 
 class TransceiverCallback : public BLECharacteristicCallbacks {
 private:
@@ -20,8 +20,9 @@ public:
   TransceiverCallback(size_t maxLen)
     : maxLength(maxLen) {}
 
+  // this is the function that is executed when the device receives a value
   void onWrite(BLECharacteristic *pCharacteristic) override {
-    String value = pCharacteristic->getValue();
+    String value = pCharacteristic->getValue(); // received value
     g_received = String(value.c_str()); 
     if (g_received.length() >= maxLength) {
       Serial.println(F("Error: Received value too long"));
@@ -31,7 +32,7 @@ public:
     Serial.print("Received: ");
     Serial.println(g_received);
 
-    pCharacteristic->setValue(g_sent.c_str());
+    pCharacteristic->setValue(g_sent.c_str()); // send a value to the mobile app
     pCharacteristic->notify();
 
     Serial.print("Sent: ");
@@ -87,7 +88,7 @@ void setup() {
 void loop() {
   delay(500);
   counter++;
-  g_sent = String(counter);
+  g_sent = String(counter); // this is the value that is sent after the esp32 receives a value.
   Serial.print("Received: ");
   Serial.println(g_received);
 }
