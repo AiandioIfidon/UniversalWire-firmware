@@ -3,11 +3,19 @@
 #include <BLEUtils.h>
 #include <BLEServer.h>
 
+#include "transactionChecker.hpp"
+
 int counter = 0;
+
 const uint8_t MAX_CREDENTIAL_LENGTH = 32;
 const String DEVICE_NAME = "Transceiver";
-String g_received = ""; 
-String g_sent = "";
+String g_digest = ""; 
+String g_sent = "not checked";
+
+bool isChecked = false;
+bool isChecking = false;
+bool success = false;
+
 
 const String SERVICE_UUID = "853f29b2-f5ed-4b69-b4c6-9cd68a9fc2b0"; // these UUIDs were generated using an online UUID generator.
 const String SEND_UUID = "b72b9432-25f9-4c7f-96cb-fcb8efde84fd"; // they can be anything but they have to match with the app and this is what I used in the app.
@@ -23,20 +31,27 @@ public:
   // this is the function that is executed when the device receives a value
   void onWrite(BLECharacteristic *pCharacteristic) override {
     String value = pCharacteristic->getValue(); // received value
-    g_received = String(value.c_str()); 
-    if (g_received.length() >= maxLength) {
-      Serial.println(F("Error: Received value too long"));
-      return;
+    g_digest = value;
+    Serial.print("Digest Receive: ");
+    Serial.println(g_digest);
+
+    if(isChecking) {
+      g_sent = "Is being checked";
     }
-
-    Serial.print("Received: ");
-    Serial.println(g_received);
-
+    if(isChecked) {
+      g_sent = success? "success" : "failed";
+    }
     pCharacteristic->setValue(g_sent.c_str()); // send a value to the mobile app
     pCharacteristic->notify();
-
     Serial.print("Sent: ");
     Serial.println(g_sent);
+    
+    
+    if(!isChecking) {
+      isChecking = true;
+      success = checkTransaction(g_digest);
+      isChecked = true;
+    }
   }
 };
 
@@ -69,7 +84,7 @@ void setupBLEServer() {
   Characteristic->setCallbacks(new TransceiverCallback(MAX_CREDENTIAL_LENGTH));
 
   pService->start();
-
+ 
   BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
   pAdvertising->addServiceUUID(SERVICE_UUID);
   pAdvertising->setScanResponse(true);
@@ -86,9 +101,5 @@ void setup() {
 }
 
 void loop() {
-  delay(500);
-  counter++;
-  g_sent = String(counter); // this is the value that is sent after the esp32 receives a value.
-  Serial.print("Received: ");
-  Serial.println(g_received);
+  delay(1500);
 }
